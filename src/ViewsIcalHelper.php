@@ -38,8 +38,8 @@ final class ViewsIcalHelper implements ViewsIcalHelperInterface {
     if (isset($field_mapping['summary_field'])) {
       /** @var \Drupal\Core\Field\FieldItemInterface $summary */
       $summary = $entity->{$field_mapping['summary_field']}->first();
-      if (!empty($location)) {
-      	$event->setSummary($summary->getValue()['value']);
+      if (!empty($summary)) {
+        $event->setSummary($summary->getValue()['value']);
       }
     }
 
