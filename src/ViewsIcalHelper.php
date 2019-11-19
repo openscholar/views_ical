@@ -38,19 +38,25 @@ final class ViewsIcalHelper implements ViewsIcalHelperInterface {
     if (isset($field_mapping['summary_field'])) {
       /** @var \Drupal\Core\Field\FieldItemInterface $summary */
       $summary = $entity->{$field_mapping['summary_field']}->first();
-      $event->setSummary($summary->getValue()['value']);
+      if (!empty($summary)) {
+        $event->setSummary($summary->getValue()['value']);
+      }
     }
 
     if (isset($field_mapping['location_field'])) {
       /** @var \Drupal\Core\Field\FieldItemInterface $location */
       $location = $entity->{$field_mapping['location_field']}->first();
-      $event->setLocation($location->getValue()['value']);
+      if (!empty($location)) {
+        $event->setLocation($location->getValue()['value']);
+      }
     }
 
     if (isset($field_mapping['description_field'])) {
       /** @var \Drupal\Core\Field\FieldItemInterface $description */
       $description = $entity->{$field_mapping['description_field']}->first();
-      $event->setDescription(\strip_tags($description->getValue()['value']));
+      if (!empty($description)) {
+        $event->setDescription(\strip_tags($description->getValue()['value']));
+      }
     }
 
     $event->setUseTimezone(TRUE);
