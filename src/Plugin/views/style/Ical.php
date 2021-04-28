@@ -156,7 +156,13 @@ class Ical extends StylePluginBase {
     $events = [];
     $timezone = $this->getTimezone();
 
+    $ids = [];
     foreach ($this->view->result as $row_index => $row) {
+      // Distinct query not working in views settings.
+      // Prevent recurring event to export multiple times.
+      if (isset($ids[$row->_entity->id()])) {
+        continue;
+      }
       // Use date_recur's API to generate the events.
       // Recursive events will be automatically handled here.
       if ($date_field_type === 'date_recur') {
@@ -165,6 +171,7 @@ class Ical extends StylePluginBase {
       else {
         $this->helper->addEvent($events, $row->_entity, $timezone, $this->options);
       }
+      $ids[$row->_entity->id()] = $row->_entity->id();
     }
 
     $build = [
