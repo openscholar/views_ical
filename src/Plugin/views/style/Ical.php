@@ -5,6 +5,7 @@ namespace Drupal\views_ical\Plugin\views\style;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\date_recur\Plugin\views\field\DateRecurDate;
 use Drupal\views\Plugin\views\style\StylePluginBase;
 use Drupal\Core\Url;
 use Drupal\views_ical\ViewsIcalHelperInterface;
@@ -150,24 +151,10 @@ class Ical extends StylePluginBase {
       trigger_error('Drupal\views_ical\Plugin\views\style\Ical: Missing row plugin', E_WARNING);
       return [];
     }
-    /** @var \Drupal\Core\Field\FieldDefinitionInterface[] $field_storage_definitions */
-    $field_storage_definitions = $this->entityFieldManager->getFieldStorageDefinitions($this->view->field[$this->options['date_field']]->definition['entity_type']);
-    $date_field_definition = $field_storage_definitions[$this->view->field[$this->options['date_field']]->definition['field_name']];
-    /** @var string $date_field_type */
-    $date_field_type = $date_field_definition->getType();
+    $date_field_type = $this->getDateFieldType();
 
     $events = [];
-    $user_timezone = \drupal_get_user_timezone();
-
-    // Make sure the events are made as per the configuration in view.
-    /** @var string $timezone_override */
-    $timezone_override = $this->view->field[$this->options['date_field']]->options['settings']['timezone_override'];
-    if ($timezone_override) {
-      $timezone = new \DateTimeZone($timezone_override);
-    }
-    else {
-      $timezone = new \DateTimeZone($user_timezone);
-    }
+    $timezone = $this->getTimezone();
 
     foreach ($this->view->result as $row_index => $row) {
       // Use date_recur's API to generate the events.
@@ -188,6 +175,46 @@ class Ical extends StylePluginBase {
     ];
     unset($this->view->row_index);
     return $build;
+  }
+
+  /**
+   * Get Date field type value.
+   *
+   * @return string
+   *   Date field type.
+   */
+  protected function getDateFieldType(): string {
+    $date_field_name = $this->options['date_field'];
+    $view_date_field = $this->view->field[$date_field_name];
+    if ($view_date_field instanceof DateRecurDate) {
+      return 'date_recur';
+    }
+    $entity_type = $view_date_field->definition['entity_type'];
+    /** @var \Drupal\Core\Field\FieldDefinitionInterface[] $field_storage_definitions */
+    $field_storage_definitions = $this->entityFieldManager->getFieldStorageDefinitions($entity_type);
+    $date_field_definition = $field_storage_definitions[$date_field_name];
+    /** @var string $date_field_type */
+    return $date_field_definition->getType();
+  }
+
+  /**
+   * @return \DateTimeZone
+   */
+  protected function getTimezone(): \DateTimeZone {
+    $user_timezone = \drupal_get_user_timezone();
+    $view_field = $this->view->field[$this->options['date_field']];
+    $timezone = new \DateTimeZone($user_timezone);
+    if (empty($view_field->options['settings']['timezone_override'])) {
+      return $timezone;
+    }
+
+    // Make sure the events are made as per the configuration in view.
+    /** @var string $timezone_override */
+    $timezone_override = $view_field->options['settings']['timezone_override'];
+    if ($timezone_override) {
+      $timezone = new \DateTimeZone($timezone_override);
+    }
+    return $timezone;
   }
 
 }
