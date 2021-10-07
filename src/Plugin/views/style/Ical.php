@@ -2,13 +2,12 @@
 
 namespace Drupal\views_ical\Plugin\views\style;
 
-use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\date_recur\Plugin\views\field\DateRecurDate;
 use Drupal\views\Plugin\views\style\StylePluginBase;
 use Drupal\Core\Url;
 use Drupal\views_ical\ViewsIcalHelperInterface;
-use Eluceo\iCal\Component\Event;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -87,41 +86,53 @@ class Ical extends StylePluginBase {
     /** @var array $field_options */
     $field_options = $this->displayHandler->getFieldLabels();
 
-    $form['date_field'] = array(
+    $form['date_field'] = [
       '#type' => 'select',
       '#title' => $this->t('Date field'),
       '#options' => $field_options,
       '#default_value' => $this->options['date_field'],
       '#description' => $this->t('Please identify the field to use as the iCal date for each item in this view.'),
       '#required' => TRUE,
-    );
+    ];
 
-    $form['summary_field'] = array(
+    $form['summary_field'] = [
       '#type' => 'select',
       '#title' => $this->t('SUMMARY field'),
       '#options' => $field_options,
       '#default_value' => $this->options['summary_field'],
       '#description' => $this->t('You may optionally change the SUMMARY component for each event in the iCal output. Choose which text field you would like to be output as the SUMMARY.'),
-    );
+    ];
 
-    $form['location_field'] = array(
+    $form['location_field'] = [
       '#type' => 'select',
       '#title' => $this->t('LOCATION field'),
       '#options' => $field_options,
       '#default_value' => $this->options['location_field'],
       '#description' => $this->t('You may optionally include a LOCATION component for each event in the iCal output. Choose which text field you would like to be output as the LOCATION.'),
-    );
+    ];
 
-    $form['description_field'] = array(
+    $form['description_field'] = [
       '#type' => 'select',
       '#title' => $this->t('DESCRIPTION field'),
       '#options' => $field_options,
       '#default_value' => $this->options['description_field'],
       '#description' => $this->t('You may optionally include a DESCRIPTION component for each event in the iCal output. Choose which text field you would like to be output as the DESCRIPTION.'),
-    );
+    ];
   }
 
-  public function attachTo(array &$build, $display_id, Url $feed_url, $title) {
+  /**
+   * Attach to.
+   *
+   * @param array $build
+   *   Build array.
+   * @param string $display_id
+   *   Display id.
+   * @param \Drupal\Core\Url $feed_url
+   *   Feed url.
+   * @param string $title
+   *   Title.
+   */
+  public function attachTo(array &$build, string $display_id, Url $feed_url, string $title) {
     $url_options = [];
     $input = $this->view->getExposedInput();
     if ($input) {
@@ -156,7 +167,13 @@ class Ical extends StylePluginBase {
     $events = [];
     $timezone = $this->getTimezone();
 
+    $ids = [];
     foreach ($this->view->result as $row_index => $row) {
+      // Distinct query not working in views settings.
+      // Prevent recurring event to export multiple times.
+      if (isset($ids[$row->_entity->id()])) {
+        continue;
+      }
       // Use date_recur's API to generate the events.
       // Recursive events will be automatically handled here.
       if ($date_field_type === 'date_recur') {
@@ -165,6 +182,7 @@ class Ical extends StylePluginBase {
       else {
         $this->helper->addEvent($events, $row->_entity, $timezone, $this->options);
       }
+      $ids[$row->_entity->id()] = $row->_entity->id();
     }
 
     $build = [
@@ -177,44 +195,47 @@ class Ical extends StylePluginBase {
     return $build;
   }
 
-/**
- * Get Date field type value.
- *
- * @return string
- *   Date field type.
- */
-protected function getDateFieldType(): string {
-  $date_field_name = $this->options['date_field'];
-  $view_date_field = $this->view->field[$date_field_name];
-  if ($view_date_field instanceof DateRecurDate) {
-    return 'date_recur';
+  /**
+   * Get Date field type value.
+   *
+   * @return string
+   *   Date field type.
+   */
+  protected function getDateFieldType(): string {
+    $date_field_name = $this->options['date_field'];
+    $view_date_field = $this->view->field[$date_field_name];
+    if ($view_date_field instanceof DateRecurDate) {
+      return 'date_recur';
+    }
+    $entity_type = $view_date_field->definition['entity_type'];
+    /** @var \Drupal\Core\Field\FieldDefinitionInterface[] $field_storage_definitions */
+    $field_storage_definitions = $this->entityFieldManager->getFieldStorageDefinitions($entity_type);
+    $date_field_definition = $field_storage_definitions[$date_field_name];
+    /** @var string $date_field_type */
+    return $date_field_definition->getType();
   }
-  $entity_type = $view_date_field->definition['entity_type'];
-  /** @var \Drupal\Core\Field\FieldDefinitionInterface[] $field_storage_definitions */
-  $field_storage_definitions = $this->entityFieldManager->getFieldStorageDefinitions($entity_type);
-  $date_field_definition = $field_storage_definitions[$date_field_name];
-  /** @var string $date_field_type */
-  return $date_field_definition->getType();
-}
 
-/**
- * @return \DateTimeZone
- */
-protected function getTimezone(): \DateTimeZone {
-  $user_timezone = \drupal_get_user_timezone();
-  $view_field = $this->view->field[$this->options['date_field']];
-  $timezone = new \DateTimeZone($user_timezone);
-  if (empty($view_field->options['settings']['timezone_override'])) {
+  /**
+   * Return Timezone.
+   *
+   * @return \DateTimeZone
+   *   Timezone.
+   */
+  protected function getTimezone(): \DateTimeZone {
+    $user_timezone = \date_default_timezone_get();
+    $view_field = $this->view->field[$this->options['date_field']];
+    $timezone = new \DateTimeZone($user_timezone);
+    if (empty($view_field->options['settings']['timezone_override'])) {
+      return $timezone;
+    }
+
+    // Make sure the events are made as per the configuration in view.
+    /** @var string $timezone_override */
+    $timezone_override = $view_field->options['settings']['timezone_override'];
+    if ($timezone_override) {
+      $timezone = new \DateTimeZone($timezone_override);
+    }
     return $timezone;
   }
-
-  // Make sure the events are made as per the configuration in view.
-  /** @var string $timezone_override */
-  $timezone_override = $view_field->options['settings']['timezone_override'];
-  if ($timezone_override) {
-    $timezone = new \DateTimeZone($timezone_override);
-  }
-  return $timezone;
-}
 
 }
