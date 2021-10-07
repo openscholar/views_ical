@@ -91,8 +91,9 @@ final class ViewsIcalHelper implements ViewsIcalHelperInterface {
    * {@inheritdoc}
    */
   public function addDateRecurEvent(array &$events, ContentEntityInterface $entity, \DateTimeZone $timezone, array $field_mapping): void {
+    $field_name = preg_replace('/\_value$/', '', $field_mapping['date_field']);
     /** @var \Drupal\date_recur\Plugin\Field\FieldType\DateRecurItem[] $field_items */
-    $field_items = $entity->{$field_mapping['date_field']};
+    $field_items = $entity->{$field_name};
 
     foreach ($field_items as $index => $item) {
       /** @var \Drupal\date_recur\DateRange[] $occurrences */
