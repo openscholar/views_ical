@@ -28,7 +28,7 @@ function views_ical_preprocess_views_view_ical(&$variables) {
   $variables['title'] = $title;
 
   $calendar = new Calendar('-//Drupal iCal API//EN');
-  $user_timezone = \drupal_get_user_timezone();
+  $user_timezone = date_default_timezone_get();
 
   /** @var string $user_timezone */
   $v_timezone = new Timezone($user_timezone);

@@ -157,7 +157,7 @@ class Ical extends StylePluginBase {
     $date_field_type = $date_field_definition->getType();
 
     $events = [];
-    $user_timezone = \drupal_get_user_timezone();
+    $user_timezone = date_default_timezone_get();
 
     // Make sure the events are made as per the configuration in view.
     /** @var string $timezone_override */
