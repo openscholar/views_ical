@@ -31,7 +31,7 @@
  *
  * @ingroup themeable
  */
-#}BEGIN:VEVENT{{ "\r\n" }}{% for field in fields -%}{% spaceless %}
+#}BEGIN:VEVENT{{ "\r\n" }}{% for field in fields -%}{% apply spaceless %}
   {{ field.separator }}
   {%- if field.wrapper_element -%}
     <{{ field.wrapper_element }}{{ field.wrapper_attributes }}>
@@ -50,4 +50,4 @@
   {%- endif %}
   {%- if field.wrapper_element -%}
     </{{ field.wrapper_element }}>
-  {%- endif %}{% endspaceless %}{{ "\r\n" }}{%- endfor %}END:VEVENT{{ "\r\n" }}{# skip line ending #}
+  {%- endif %}{% endapply %}{{ "\r\n" }}{%- endfor %}END:VEVENT{{ "\r\n" }}{# skip line ending #}

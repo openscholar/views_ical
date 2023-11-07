@@ -2,6 +2,6 @@ name: Views iCal
 type: module
 description: Provides an iCal Views style plugin.
 package: Views
-core_version_requirement: ^8 || ^9
+core_version_requirement: ^8 || ^9 || ^10
 dependencies:
   - drupal:views

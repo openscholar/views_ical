@@ -51,6 +51,6 @@ function views_ical_preprocess_views_view_ical(&$variables) {
  *   - view: A View object.
  */
 function views_ical_preprocess_views_view_ical_fields(&$variables) {
-  module_load_include('inc', 'views', 'views.theme');
+  Drupal::moduleHandler()->loadInclude('views', 'inc', $name = 'views.theme');
   template_preprocess_views_view_fields($variables);
 }
